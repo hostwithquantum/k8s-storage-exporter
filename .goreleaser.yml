@@ -1,0 +1,41 @@
+version: 2
+
+release:
+  github:
+    owner: hostwithquantum
+    name: k8s-storage-exporter
+
+builds:
+  - id: k8s-storage-exporter
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+
+kos:
+  - build: k8s-storage-exporter
+    repositories:
+      - ghcr.io/hostwithquantum/k8s-storage-exporter
+    bare: true
+    tags:
+      - "{{ .Tag }}"
+      - latest
+    labels:
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.name": "{{.ProjectName}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+      "org.opencontainers.image.source": "{{.GitURL}}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    creation_time: "{{ .CommitTimestamp }}"
+
+changelog:
+  sort: asc
