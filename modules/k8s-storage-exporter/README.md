@@ -36,6 +36,8 @@ values: {
 | `listenPort`              | `int`               | `9110`                                        | Port the metrics endpoint listens on                   |
 | `scrapeTimeout`           | `string`            | `30s`                                         | Timeout for collecting stats from the kubelet          |
 | `disableExporterMetrics`  | `bool`              | `false`                                       | Exclude `go_*` and `process_*` metrics                 |
+| `podLabels`               | `[...string]`       | `[]`                                          | Pod label keys attached to metrics as `label_<key>`; adds pods list/watch RBAC |
+| `podSelector`             | `string`            | `""`                                          | Label selector limiting which pods are watched for `podLabels` |
 | `podAnnotations`          | `{[string]: string}`| Prometheus scrape annotations                 | Pod annotations                                        |
 | `resources`               | object              | requests 10m/32Mi, limit 64Mi                 | Container resources                                    |
 | `tolerations`             | list                | `[{operator: "Exists"}]`                      | Run on all nodes, including control plane              |

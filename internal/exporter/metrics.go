@@ -23,13 +23,12 @@ func newFSDescs(prefix, subject string, labels []string) fsDescs {
 }
 
 var (
-	ephemeralDescs = newFSDescs("storage_ephemeral_",
-		"the pod's ephemeral storage", []string{"pod", "namespace"})
-	volumeDescs = newFSDescs("storage_volumes_",
-		"the volume", []string{"pod", "namespace", "volume"})
-
 	scrapeErrors = prometheus.NewDesc("storage_scrape_errors",
 		"Number of nodes that failed to be scraped during the last collection.", nil, nil)
+
+	labelsSynced = prometheus.NewDesc("storage_pod_labels_cache_synced",
+		"Whether the pod label cache behind --pod-labels is synced with the "+
+			"API server (1) or label values may be missing or stale (0).", nil, nil)
 )
 
 func sendFS(ch chan<- prometheus.Metric, fs *fsStats, descs fsDescs, labels ...string) {
