@@ -15,7 +15,7 @@ carry the `volume` name.
 | `storage_ephemeral_inodes{,_free,_used}`            | `pod`, `namespace`                        |
 | `storage_volumes_{used,available,capacity}_bytes`   | `pod`, `namespace`, `volume`              |
 | `storage_volumes_inodes{,_free,_used}`              | `pod`, `namespace`, `volume`              |
-| `storage_scrape_errors`                             | number of nodes that failed during scrape |
+| `storage_scrape_errors`                             | `node`; 1 if the node's scrape failed, `node=""` if listing nodes failed |
 
 With `--pod-labels`, the listed pod labels are added to all pod metrics as
 `label_<key>` (sanitized, e.g. `app.kubernetes.io/name` becomes

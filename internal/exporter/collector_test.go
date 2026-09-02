@@ -54,9 +54,10 @@ func TestCollectCountsFailedNodes(t *testing.T) {
 	}, "")
 
 	expected := `
-# HELP storage_scrape_errors Number of nodes that failed to be scraped during the last collection.
+# HELP storage_scrape_errors Whether scraping the node's kubelet stats failed during the last collection (1) or not (0); reported without a node when listing the nodes failed.
 # TYPE storage_scrape_errors gauge
-storage_scrape_errors 1
+storage_scrape_errors{node="node-a"} 0
+storage_scrape_errors{node="node-broken"} 1
 `
 	if err := testutil.CollectAndCompare(c, strings.NewReader(expected), "storage_scrape_errors"); err != nil {
 		t.Error(err)
@@ -150,9 +151,9 @@ func TestCollectListNodesError(t *testing.T) {
 	}
 
 	expected := `
-# HELP storage_scrape_errors Number of nodes that failed to be scraped during the last collection.
+# HELP storage_scrape_errors Whether scraping the node's kubelet stats failed during the last collection (1) or not (0); reported without a node when listing the nodes failed.
 # TYPE storage_scrape_errors gauge
-storage_scrape_errors 1
+storage_scrape_errors{node=""} 1
 `
 	if err := testutil.CollectAndCompare(c, strings.NewReader(expected), "storage_scrape_errors"); err != nil {
 		t.Error(err)

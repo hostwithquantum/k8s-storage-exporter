@@ -54,9 +54,9 @@ storage_ephemeral_inodes_used{namespace="demo",pod="web-0"} 20
 # HELP storage_ephemeral_used_bytes Bytes used on the pod's ephemeral storage.
 # TYPE storage_ephemeral_used_bytes gauge
 storage_ephemeral_used_bytes{namespace="demo",pod="web-0"} 1000
-# HELP storage_scrape_errors Number of nodes that failed to be scraped during the last collection.
+# HELP storage_scrape_errors Whether scraping the node's kubelet stats failed during the last collection (1) or not (0); reported without a node when listing the nodes failed.
 # TYPE storage_scrape_errors gauge
-storage_scrape_errors 0
+storage_scrape_errors{node="node-a"} 0
 # HELP storage_volumes_available_bytes Bytes available on the volume.
 # TYPE storage_volumes_available_bytes gauge
 storage_volumes_available_bytes{namespace="demo",pod="web-0",volume="data"} 1500

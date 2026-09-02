@@ -24,7 +24,9 @@ func newFSDescs(prefix, subject string, labels []string) fsDescs {
 
 var (
 	scrapeErrors = prometheus.NewDesc("storage_scrape_errors",
-		"Number of nodes that failed to be scraped during the last collection.", nil, nil)
+		"Whether scraping the node's kubelet stats failed during the last "+
+			"collection (1) or not (0); reported without a node when listing "+
+			"the nodes failed.", []string{"node"}, nil)
 
 	labelsSynced = prometheus.NewDesc("storage_pod_labels_cache_synced",
 		"Whether the pod label cache behind --pod-labels is synced with the "+

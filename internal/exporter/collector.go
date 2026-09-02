@@ -107,14 +107,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	nodes, err := c.nodes(ctx)
 	if err != nil {
 		c.log.Error("listing nodes failed", "error", err)
-		ch <- prometheus.MustNewConstMetric(scrapeErrors, prometheus.GaugeValue, 1)
+		ch <- prometheus.MustNewConstMetric(scrapeErrors, prometheus.GaugeValue, 1, "")
 		return
 	}
 
 	var (
 		mu     sync.Mutex
 		seen   = make(map[string]bool)
-		failed int
+		failed = make(map[string]bool, len(nodes))
 		wg     sync.WaitGroup
 	)
 	for _, node := range nodes {
@@ -125,7 +125,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			defer mu.Unlock()
 			if err != nil {
 				c.log.Error("scraping node failed", "node", node, "error", err)
-				failed++
+				failed[node] = true
 				return
 			}
 			c.emit(ch, pods, seen)
@@ -133,7 +133,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 	wg.Wait()
 
-	ch <- prometheus.MustNewConstMetric(scrapeErrors, prometheus.GaugeValue, float64(failed))
+	for _, node := range nodes {
+		value := 0.0
+		if failed[node] {
+			value = 1
+		}
+		ch <- prometheus.MustNewConstMetric(scrapeErrors, prometheus.GaugeValue, value, node)
+	}
 	if c.labels != nil {
 		synced := 0.0
 		if c.labels.informer.HasSynced() {
