@@ -24,16 +24,7 @@ import (
 		}
 	}
 
-	// The securityContext allows setting the container security context.
-	securityContext: corev1.#SecurityContext & {
-		allowPrivilegeEscalation: *false | true
-		privileged:               *false | true
-		readOnlyRootFilesystem:   *true | bool
-		capabilities: drop: *["ALL"] | [...string]
-	}
-
 	// Pod optional settings.
-	podSecurityContext?: corev1.#PodSecurityContext
 	imagePullSecrets?: [...timoniv1.#ObjectReference]
 
 	// The exporter runs on every node by default, including control plane.

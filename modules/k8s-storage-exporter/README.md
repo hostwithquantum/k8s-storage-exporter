@@ -44,4 +44,4 @@ values: {
 | `nodeSelector`            | `{[string]: string}`| `{"kubernetes.io/os": "linux"}`               | Node selector                                          |
 
 Plus the standard Timoni fields: `metadata.labels`, `metadata.annotations`,
-`securityContext`, `podSecurityContext`, `imagePullSecrets`.
+`imagePullSecrets`.
