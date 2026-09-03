@@ -29,6 +29,14 @@ import (
 			resources: ["nodes/proxy"]
 			verbs: ["get"]
 		},
+		// The pod watch behind --pod-labels.
+		if len(#config.podLabels) > 0 {
+			{
+				apiGroups: [""]
+				resources: ["pods"]
+				verbs: ["list", "watch"]
+			}
+		},
 	]
 }
 

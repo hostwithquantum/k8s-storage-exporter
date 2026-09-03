@@ -15,7 +15,15 @@ carry the `volume` name.
 | `storage_ephemeral_inodes{,_free,_used}`            | `pod`, `namespace`                        |
 | `storage_volumes_{used,available,capacity}_bytes`   | `pod`, `namespace`, `volume`              |
 | `storage_volumes_inodes{,_free,_used}`              | `pod`, `namespace`, `volume`              |
-| `storage_scrape_errors`                             | number of nodes that failed during scrape |
+| `storage_scrape_errors`                             | `node`; 1 if the node's scrape failed, `node=""` if listing nodes failed |
+
+With `--pod-labels`, the listed pod labels are added to all pod metrics as
+`label_<key>` (sanitized, e.g. `app.kubernetes.io/name` becomes
+`label_app_kubernetes_io_name`), like kube-state-metrics. The exporter
+watches pod metadata only (pods list/watch RBAC; the API server never
+sends specs or statuses) and keeps only name, namespace and the wanted
+labels in memory; `--pod-selector` limits the watch to matching pods.
+Pods outside the cache still get metrics, with empty label values.
 
 Statistics are fetched through the API server proxy (`/api/v1/nodes/<node>/proxy/stats/summary`). Auth is handled by client-go: in-cluster config in the cluster, kubeconfig (`--kubeconfig` or `$KUBECONFIG`) locally.
 
@@ -37,7 +45,9 @@ k8s-storage-exporter \
   --kubeconfig ./my.kubeconfig \  # $KUBECONFIG
   --node node-a \                 # $NODE_NAME, empty scrapes all nodes
   --scrape-timeout 30s \
-  --disable-exporter-metrics      # drop go_* and process_* metrics
+  --disable-exporter-metrics \    # drop go_* and process_* metrics
+  --pod-labels app,team \         # add label_app, label_team to metrics
+  --pod-selector team=core        # only watch matching pods for labels
 ```
 
 ## Develop

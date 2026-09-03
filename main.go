@@ -15,15 +15,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli/v3"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
 
 	"github.com/hostwithquantum/k8s-storage-exporter/internal/exporter"
 )
 
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	// client-go logs through klog (e.g. pod watch failures); route it
+	// through slog so everything comes out as JSON.
+	klog.SetSlogLogger(log)
 
 	cmd := &cli.Command{
 		Name:  "k8s-storage-exporter",
@@ -52,6 +56,14 @@ func main() {
 			&cli.BoolFlag{
 				Name:  "disable-exporter-metrics",
 				Usage: "exclude metrics about the exporter itself (go_*, process_*)",
+			},
+			&cli.StringSliceFlag{
+				Name:  "pod-labels",
+				Usage: "pod label keys to attach to metrics as label_<key>; needs pods list/watch RBAC",
+			},
+			&cli.StringFlag{
+				Name:  "pod-selector",
+				Usage: "label selector (e.g. 'team=core') limiting which pods are watched for --pod-labels",
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -88,16 +100,28 @@ func run(ctx context.Context, cmd *cli.Command, log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	client, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		return err
-	}
 	if node := cmd.String("node"); node != "" {
 		log = log.With("node", node)
 	}
 
+	podLabels, podSelector := cmd.StringSlice("pod-labels"), cmd.String("pod-selector")
+	if podSelector != "" {
+		if len(podLabels) == 0 {
+			return errors.New("--pod-selector needs --pod-labels")
+		}
+		if _, err := labels.Parse(podSelector); err != nil {
+			return fmt.Errorf("invalid --pod-selector: %w", err)
+		}
+	}
+
+	collector, err := exporter.New(cfg, cmd.String("node"), cmd.Duration("scrape-timeout"), podLabels, podSelector, log)
+	if err != nil {
+		return err
+	}
+	collector.Run(ctx)
+
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(exporter.New(client, cmd.String("node"), cmd.Duration("scrape-timeout"), log))
+	registry.MustRegister(collector)
 	if !cmd.Bool("disable-exporter-metrics") {
 		registry.MustRegister(
 			collectors.NewGoCollector(),

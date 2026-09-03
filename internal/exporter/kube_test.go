@@ -1,12 +1,13 @@
 package exporter_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 )
 
@@ -53,9 +54,9 @@ storage_ephemeral_inodes_used{namespace="demo",pod="web-0"} 20
 # HELP storage_ephemeral_used_bytes Bytes used on the pod's ephemeral storage.
 # TYPE storage_ephemeral_used_bytes gauge
 storage_ephemeral_used_bytes{namespace="demo",pod="web-0"} 1000
-# HELP storage_scrape_errors Number of nodes that failed to be scraped during the last collection.
+# HELP storage_scrape_errors Whether scraping the node's kubelet stats failed during the last collection (1) or not (0); reported without a node when listing the nodes failed.
 # TYPE storage_scrape_errors gauge
-storage_scrape_errors 0
+storage_scrape_errors{node="node-a"} 0
 # HELP storage_volumes_available_bytes Bytes available on the volume.
 # TYPE storage_volumes_available_bytes gauge
 storage_volumes_available_bytes{namespace="demo",pod="web-0",volume="data"} 1500
@@ -77,12 +78,33 @@ storage_volumes_used_bytes{namespace="demo",pod="web-0",volume="data"} 500
 storage_volumes_used_bytes{namespace="demo",pod="web-0",volume="logs"} 700
 `
 
-// apiServer fakes the two API server endpoints the exporter talks to.
-// summaries maps node name -> stats/summary JSON; a missing node returns 500.
-func apiServer(t *testing.T, summaries map[string]string) *kubernetes.Clientset {
+// apiServer fakes the API server endpoints the exporter talks to.
+// summaries maps node name -> stats/summary JSON; a missing node returns
+// 500. pods are JSON pod objects served to the pod label watch, which asks
+// for metadata only (PartialObjectMetadataList).
+func apiServer(t *testing.T, summaries map[string]string, pods ...string) *rest.Config {
 	t.Helper()
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/pods", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Query().Get("sendInitialEvents") == "true" {
+			// Act like an API server without the WatchList feature;
+			// client-go then falls back to plain LIST + WATCH.
+			http.Error(w, "sendInitialEvents is not supported", http.StatusBadRequest)
+			return
+		}
+		if r.URL.Query().Get("watch") == "true" {
+			// Hold the watch open until the informer stops; the list
+			// below already delivered everything.
+			w.WriteHeader(http.StatusOK)
+			w.(http.Flusher).Flush()
+			<-r.Context().Done()
+			return
+		}
+		_, _ = w.Write([]byte(`{"apiVersion": "meta.k8s.io/v1", "kind": "PartialObjectMetadataList", "metadata": {"resourceVersion": "1"}, "items": [` +
+			strings.Join(matchingPods(t, pods, r.URL.Query().Get("labelSelector")), ",") + `]}`))
+	})
 	mux.HandleFunc("GET /api/v1/nodes", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		items := make([]string, 0, len(summaries))
@@ -103,9 +125,35 @@ func apiServer(t *testing.T, summaries map[string]string) *kubernetes.Clientset 
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 
-	client, err := kubernetes.NewForConfig(&rest.Config{Host: server.URL})
+	// t.Context() is canceled before cleanups run, which ends the open
+	// watch request so server.Close does not hang.
+
+	return &rest.Config{Host: server.URL}
+}
+
+// matchingPods filters JSON pod objects by a label selector, like the real
+// API server does.
+func matchingPods(t *testing.T, pods []string, selector string) []string {
+	t.Helper()
+	sel, err := labels.Parse(selector) // "" parses to match-everything
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("bad labelSelector %q: %v", selector, err)
+		return nil
 	}
-	return client
+	var matched []string
+	for _, p := range pods {
+		var pod struct {
+			Metadata struct {
+				Labels map[string]string `json:"labels"`
+			} `json:"metadata"`
+		}
+		if err := json.Unmarshal([]byte(p), &pod); err != nil {
+			t.Errorf("bad pod JSON %q: %v", p, err)
+			continue
+		}
+		if sel.Matches(labels.Set(pod.Metadata.Labels)) {
+			matched = append(matched, p)
+		}
+	}
+	return matched
 }

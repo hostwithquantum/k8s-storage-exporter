@@ -53,6 +53,20 @@ import (
 	// Exclude metrics about the exporter itself (go_*, process_*).
 	disableExporterMetrics: *false | bool
 
+	// Pod label keys attached to metrics as label_<key>. When set, the
+	// exporter watches pods and the ClusterRole gains pods list/watch.
+	podLabels: *[] | [...string]
+
+	// Label selector (e.g. "team=core") limiting which pods are watched
+	// for podLabels; other pods get empty label values.
+	podSelector: *"" | string
+
+	// The binary rejects --pod-selector without --pod-labels; require
+	// podLabels here so timoni fails before deploying.
+	if podSelector != "" {
+		podLabels: [string, ...string]
+	}
+
 	// The pod annotations; by default the Prometheus scrape annotations.
 	podAnnotations: *{
 		"prometheus.io/scrape": "true"

@@ -1,6 +1,8 @@
 package templates
 
 import (
+	"strings"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -31,6 +33,12 @@ import (
 							"--scrape-timeout=\(#config.scrapeTimeout)",
 							if #config.disableExporterMetrics {
 								"--disable-exporter-metrics"
+							},
+							if len(#config.podLabels) > 0 {
+								"--pod-labels=" + strings.Join(#config.podLabels, ",")
+							},
+							if #config.podSelector != "" {
+								"--pod-selector=" + #config.podSelector
 							},
 						]
 						env: [{
