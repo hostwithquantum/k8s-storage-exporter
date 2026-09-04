@@ -58,13 +58,19 @@ import (
 							path: "/healthz"
 							port: "metrics"
 						}
-						resources:       #config.resources
-						securityContext: #config.securityContext
+						resources: #config.resources
+						// Not configurable: the exporter only talks to the
+						// API server and never needs more than this.
+						securityContext: {
+							allowPrivilegeEscalation: false
+							privileged:               false
+							readOnlyRootFilesystem:   true
+							runAsNonRoot:             true
+							capabilities: drop: ["ALL"]
+							seccompProfile: type: "RuntimeDefault"
+						}
 					},
 				]
-				if #config.podSecurityContext != _|_ {
-					securityContext: #config.podSecurityContext
-				}
 				nodeSelector: #config.nodeSelector
 				tolerations:  #config.tolerations
 				if #config.imagePullSecrets != _|_ {
