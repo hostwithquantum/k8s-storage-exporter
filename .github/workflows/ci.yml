@@ -31,7 +31,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: stefanprodan/timoni/actions/setup@bb0f07cc4f586e91d5076e63e632cab8398fef41 # v0.34.0
-      - run: make timoni-lint
+      - run: make lint
+        working-directory: modules/k8s-storage-exporter
+      - run: make build
+        working-directory: modules/k8s-storage-exporter
+      - uses: cue-lang/setup-cue@a93fa358375740cd8b0078f76355512b9208acb1 # v1.0.1
+      - run: make ls
+        working-directory: modules/k8s-storage-exporter
 
   zizmor:
     runs-on: ubuntu-latest
