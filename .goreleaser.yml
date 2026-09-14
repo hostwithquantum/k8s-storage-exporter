@@ -25,6 +25,7 @@ kos:
     bare: true
     tags:
       - "{{ .Tag }}"
+      - "{{ .Version }}"
       - latest
     labels:
       "org.opencontainers.image.created": "{{.Date}}"

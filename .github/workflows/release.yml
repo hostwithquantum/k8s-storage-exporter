@@ -30,3 +30,7 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: stefanprodan/timoni/actions/setup@bb0f07cc4f586e91d5076e63e632cab8398fef41 # v0.34.0
+      - run: timoni mod push ./modules/k8s-storage-exporter oci://ghcr.io/hostwithquantum/k8s-storage-exporter-module -v "${REF_NAME#v}"
+        env:
+          REF_NAME: ${{ github.ref_name }}
