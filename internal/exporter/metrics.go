@@ -33,6 +33,35 @@ var (
 			"API server (1) or label values may be missing or stale (0).", nil, nil)
 )
 
+// containerFS combines a container's rootfs and logs usage into one
+// fsStats: together they count toward the container's ephemeral-storage
+// limit (https://kubernetes.io/docs/concepts/storage/ephemeral-storage/).
+// available/capacity/inodes come from the same underlying filesystem stat
+// on both, so rootfs's copy is kept as-is; only the used figures add up.
+func containerFS(rootfs, logs *fsStats) *fsStats {
+	if rootfs == nil {
+		return logs
+	}
+	if logs == nil {
+		return rootfs
+	}
+	out := *rootfs
+	out.UsedBytes = addUint64(rootfs.UsedBytes, logs.UsedBytes)
+	out.InodesUsed = addUint64(rootfs.InodesUsed, logs.InodesUsed)
+	return &out
+}
+
+func addUint64(a, b *uint64) *uint64 {
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	sum := *a + *b
+	return &sum
+}
+
 func sendFS(ch chan<- prometheus.Metric, fs *fsStats, descs fsDescs, labels ...string) {
 	send := func(desc *prometheus.Desc, value *uint64) {
 		if value != nil {
