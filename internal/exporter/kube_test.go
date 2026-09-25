@@ -15,18 +15,18 @@ const nodeSummary = `{
   "pods": [
     {
       "podRef": {"name": "web-0", "namespace": "demo"},
-      "ephemeral-storage": {
-        "availableBytes": 2000,
-        "capacityBytes": 3000,
-        "usedBytes": 1000,
-        "inodesFree": 280,
-        "inodes": 300,
-        "inodesUsed": 20
-      },
       "volume": [
         {"name": "data", "usedBytes": 500, "availableBytes": 1500, "capacityBytes": 2000,
          "inodes": 100, "inodesFree": 90, "inodesUsed": 10},
         {"name": "logs", "usedBytes": 700}
+      ],
+      "containers": [
+        {"name": "web-0-cmd",
+         "rootfs": {"usedBytes": 300, "availableBytes": 1500, "capacityBytes": 2000,
+                    "inodes": 100, "inodesFree": 90, "inodesUsed": 8},
+         "logs": {"usedBytes": 50, "inodesUsed": 2}},
+        {"name": "ts-sidecar",
+         "rootfs": {"usedBytes": 40}}
       ]
     },
     {
@@ -36,24 +36,25 @@ const nodeSummary = `{
 }`
 
 const expectedMetrics = `
-# HELP storage_ephemeral_available_bytes Bytes available on the pod's ephemeral storage.
+# HELP storage_ephemeral_available_bytes Bytes available on the container's ephemeral storage.
 # TYPE storage_ephemeral_available_bytes gauge
-storage_ephemeral_available_bytes{namespace="demo",pod="web-0"} 2000
-# HELP storage_ephemeral_capacity_bytes Capacity of the pod's ephemeral storage, in bytes.
+storage_ephemeral_available_bytes{container="web-0-cmd",namespace="demo",pod="web-0"} 1500
+# HELP storage_ephemeral_capacity_bytes Capacity of the container's ephemeral storage, in bytes.
 # TYPE storage_ephemeral_capacity_bytes gauge
-storage_ephemeral_capacity_bytes{namespace="demo",pod="web-0"} 3000
-# HELP storage_ephemeral_inodes Total inodes on the pod's ephemeral storage.
+storage_ephemeral_capacity_bytes{container="web-0-cmd",namespace="demo",pod="web-0"} 2000
+# HELP storage_ephemeral_inodes Total inodes on the container's ephemeral storage.
 # TYPE storage_ephemeral_inodes gauge
-storage_ephemeral_inodes{namespace="demo",pod="web-0"} 300
-# HELP storage_ephemeral_inodes_free Free inodes on the pod's ephemeral storage.
+storage_ephemeral_inodes{container="web-0-cmd",namespace="demo",pod="web-0"} 100
+# HELP storage_ephemeral_inodes_free Free inodes on the container's ephemeral storage.
 # TYPE storage_ephemeral_inodes_free gauge
-storage_ephemeral_inodes_free{namespace="demo",pod="web-0"} 280
-# HELP storage_ephemeral_inodes_used Used inodes on the pod's ephemeral storage.
+storage_ephemeral_inodes_free{container="web-0-cmd",namespace="demo",pod="web-0"} 90
+# HELP storage_ephemeral_inodes_used Used inodes on the container's ephemeral storage.
 # TYPE storage_ephemeral_inodes_used gauge
-storage_ephemeral_inodes_used{namespace="demo",pod="web-0"} 20
-# HELP storage_ephemeral_used_bytes Bytes used on the pod's ephemeral storage.
+storage_ephemeral_inodes_used{container="web-0-cmd",namespace="demo",pod="web-0"} 10
+# HELP storage_ephemeral_used_bytes Bytes used on the container's ephemeral storage.
 # TYPE storage_ephemeral_used_bytes gauge
-storage_ephemeral_used_bytes{namespace="demo",pod="web-0"} 1000
+storage_ephemeral_used_bytes{container="ts-sidecar",namespace="demo",pod="web-0"} 40
+storage_ephemeral_used_bytes{container="web-0-cmd",namespace="demo",pod="web-0"} 350
 # HELP storage_scrape_errors Whether scraping the node's kubelet stats failed during the last collection (1) or not (0); reported without a node when listing the nodes failed.
 # TYPE storage_scrape_errors gauge
 storage_scrape_errors{node="node-a"} 0
