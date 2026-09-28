@@ -48,7 +48,7 @@ func New(cfg *rest.Config, node string, timeout time.Duration, podLabelKeys []st
 		return nil, fmt.Errorf("invalid pod labels: %w", err)
 	}
 	c.ephemeral = newFSDescs("storage_ephemeral_",
-		"the pod's ephemeral storage", append([]string{"pod", "namespace"}, extra...))
+		"the container's ephemeral storage", append([]string{"pod", "namespace", "container"}, extra...))
 	c.volumes = newFSDescs("storage_volumes_",
 		"the volume", append([]string{"pod", "namespace", "volume"}, extra...))
 	if len(podLabelKeys) > 0 {
@@ -193,8 +193,10 @@ func (c *Collector) emit(ch chan<- prometheus.Metric, pods []podStats, seen map[
 		if c.labels != nil {
 			extra = c.labels.values(pod.PodRef.Namespace, pod.PodRef.Name)
 		}
-		if fs := pod.EphemeralStorage; fs != nil {
-			sendFS(ch, fs, c.ephemeral, append([]string{pod.PodRef.Name, pod.PodRef.Namespace}, extra...)...)
+		for _, container := range pod.Containers {
+			if fs := containerFS(container.Rootfs, container.Logs); fs != nil {
+				sendFS(ch, fs, c.ephemeral, append([]string{pod.PodRef.Name, pod.PodRef.Namespace, container.Name}, extra...)...)
+			}
 		}
 		if len(pod.Volumes) == 0 {
 			continue

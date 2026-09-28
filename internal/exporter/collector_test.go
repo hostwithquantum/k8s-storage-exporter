@@ -42,8 +42,8 @@ func TestCollectAllNodes(t *testing.T) {
 		"node-b": nodeSummary,
 	}, "")
 
-	if count := testutil.CollectAndCount(c, "storage_ephemeral_used_bytes"); count != 1 {
-		t.Errorf("got %d storage_ephemeral_used_bytes metrics, want 1", count)
+	if count := testutil.CollectAndCount(c, "storage_ephemeral_used_bytes"); count != 2 {
+		t.Errorf("got %d storage_ephemeral_used_bytes metrics, want 2", count)
 	}
 }
 
@@ -62,8 +62,8 @@ storage_scrape_errors{node="node-broken"} 1
 	if err := testutil.CollectAndCompare(c, strings.NewReader(expected), "storage_scrape_errors"); err != nil {
 		t.Error(err)
 	}
-	if count := testutil.CollectAndCount(c, "storage_ephemeral_used_bytes"); count != 1 {
-		t.Errorf("healthy node should still be scraped, got %d metrics, want 1", count)
+	if count := testutil.CollectAndCount(c, "storage_ephemeral_used_bytes"); count != 2 {
+		t.Errorf("healthy node should still be scraped, got %d metrics, want 2", count)
 	}
 }
 
@@ -71,8 +71,8 @@ func TestCollectPodLabels(t *testing.T) {
 	// web-0 is in the label cache; ghost is not (e.g. deleted between the
 	// kubelet report and the watch) and must get empty label values.
 	summary := `{"pods": [
-		{"podRef": {"name": "web-0", "namespace": "demo"}, "ephemeral-storage": {"usedBytes": 1000}},
-		{"podRef": {"name": "ghost", "namespace": "demo"}, "ephemeral-storage": {"usedBytes": 7}}
+		{"podRef": {"name": "web-0", "namespace": "demo"}, "containers": [{"name": "web-0-cmd", "rootfs": {"usedBytes": 1000}}]},
+		{"podRef": {"name": "ghost", "namespace": "demo"}, "containers": [{"name": "ghost-cmd", "rootfs": {"usedBytes": 7}}]}
 	]}`
 	client := apiServer(t, map[string]string{"node-a": summary},
 		`{"metadata": {"name": "web-0", "namespace": "demo",
@@ -86,10 +86,10 @@ func TestCollectPodLabels(t *testing.T) {
 	c.Run(t.Context())
 
 	expected := `
-# HELP storage_ephemeral_used_bytes Bytes used on the pod's ephemeral storage.
+# HELP storage_ephemeral_used_bytes Bytes used on the container's ephemeral storage.
 # TYPE storage_ephemeral_used_bytes gauge
-storage_ephemeral_used_bytes{label_app="web",label_app_kubernetes_io_name="frontend",namespace="demo",pod="web-0"} 1000
-storage_ephemeral_used_bytes{label_app="",label_app_kubernetes_io_name="",namespace="demo",pod="ghost"} 7
+storage_ephemeral_used_bytes{container="web-0-cmd",label_app="web",label_app_kubernetes_io_name="frontend",namespace="demo",pod="web-0"} 1000
+storage_ephemeral_used_bytes{container="ghost-cmd",label_app="",label_app_kubernetes_io_name="",namespace="demo",pod="ghost"} 7
 # HELP storage_pod_labels_cache_synced Whether the pod label cache behind --pod-labels is synced with the API server (1) or label values may be missing or stale (0).
 # TYPE storage_pod_labels_cache_synced gauge
 storage_pod_labels_cache_synced 1
@@ -117,8 +117,8 @@ func TestCollectPodSelector(t *testing.T) {
 	// Both pods exist, but the selector keeps other-0 out of the label
 	// cache, so its metrics get empty label values.
 	summary := `{"pods": [
-		{"podRef": {"name": "web-0", "namespace": "demo"}, "ephemeral-storage": {"usedBytes": 1000}},
-		{"podRef": {"name": "other-0", "namespace": "demo"}, "ephemeral-storage": {"usedBytes": 7}}
+		{"podRef": {"name": "web-0", "namespace": "demo"}, "containers": [{"name": "web-0-cmd", "rootfs": {"usedBytes": 1000}}]},
+		{"podRef": {"name": "other-0", "namespace": "demo"}, "containers": [{"name": "other-0-cmd", "rootfs": {"usedBytes": 7}}]}
 	]}`
 	client := apiServer(t, map[string]string{"node-a": summary},
 		`{"metadata": {"name": "web-0", "namespace": "demo", "labels": {"team": "core", "app": "web"}}}`,
@@ -132,10 +132,10 @@ func TestCollectPodSelector(t *testing.T) {
 	c.Run(t.Context())
 
 	expected := `
-# HELP storage_ephemeral_used_bytes Bytes used on the pod's ephemeral storage.
+# HELP storage_ephemeral_used_bytes Bytes used on the container's ephemeral storage.
 # TYPE storage_ephemeral_used_bytes gauge
-storage_ephemeral_used_bytes{label_app="web",namespace="demo",pod="web-0"} 1000
-storage_ephemeral_used_bytes{label_app="",namespace="demo",pod="other-0"} 7
+storage_ephemeral_used_bytes{container="web-0-cmd",label_app="web",namespace="demo",pod="web-0"} 1000
+storage_ephemeral_used_bytes{container="other-0-cmd",label_app="",namespace="demo",pod="other-0"} 7
 `
 	if err := testutil.CollectAndCompare(c, strings.NewReader(expected), "storage_ephemeral_used_bytes"); err != nil {
 		t.Error(err)

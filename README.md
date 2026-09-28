@@ -7,15 +7,19 @@ Prometheus exporter for pod storage usage, based on the kubelet
 
 Labels are the pod's `podRef.name` (as `pod`, matching kube-state-metrics
 and cAdvisor for easy joins) and `podRef.namespace`; volume metrics also
-carry the `volume` name.
+carry the `volume` name, ephemeral storage metrics the `container` name.
 
 | Metric                                              | Labels                                    |
 | --------------------------------------------------- | ----------------------------------------- |
-| `storage_ephemeral_{used,available,capacity}_bytes` | `pod`, `namespace`                        |
-| `storage_ephemeral_inodes{,_free,_used}`            | `pod`, `namespace`                        |
+| `storage_ephemeral_{used,available,capacity}_bytes` | `pod`, `namespace`, `container`           |
+| `storage_ephemeral_inodes{,_free,_used}`            | `pod`, `namespace`, `container`           |
 | `storage_volumes_{used,available,capacity}_bytes`   | `pod`, `namespace`, `volume`              |
 | `storage_volumes_inodes{,_free,_used}`              | `pod`, `namespace`, `volume`              |
 | `storage_scrape_errors`                             | `node`; 1 if the node's scrape failed, `node=""` if listing nodes failed |
+
+`storage_ephemeral_*` is per container, so it can be filtered down to just
+the app's own container. Pod total: `sum by (namespace, pod)
+(storage_ephemeral_used_bytes)`.
 
 With `--pod-labels`, the listed pod labels are added to all pod metrics as
 `label_<key>` (sanitized, e.g. `app.kubernetes.io/name` becomes

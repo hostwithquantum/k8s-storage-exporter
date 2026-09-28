@@ -6,9 +6,9 @@ type summary struct {
 }
 
 type podStats struct {
-	PodRef           podRef        `json:"podRef"`
-	EphemeralStorage *fsStats      `json:"ephemeral-storage"`
-	Volumes          []volumeStats `json:"volume"`
+	PodRef     podRef           `json:"podRef"`
+	Volumes    []volumeStats    `json:"volume"`
+	Containers []containerStats `json:"containers"`
 }
 
 type podRef struct {
@@ -28,4 +28,13 @@ type fsStats struct {
 type volumeStats struct {
 	fsStats
 	Name string `json:"name"`
+}
+
+// containerStats mirrors the per-container part of the kubelet summary.
+// Rootfs is the container's writable layer, Logs its log directory; both
+// count toward the container's ephemeral-storage limit.
+type containerStats struct {
+	Name   string   `json:"name"`
+	Rootfs *fsStats `json:"rootfs"`
+	Logs   *fsStats `json:"logs"`
 }
